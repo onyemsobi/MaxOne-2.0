@@ -24,11 +24,16 @@ export interface Vehicle {
   id: string
   assetType: string
   assetId: string
+  plateNumber: string | null
   batchNumber: string
   location: string
   championStatus: "Active" | "Inactive" | null
   contractStatus: "Active" | "Inactive" | null
-  vehicleStatus: "3rd Party Check-In" | "Asset Checkout" | "HP Completed" | "Inbound"
+  lifecycleState: "3rd Party Check-In" | "Asset Checkout" | "HP Completed" | "Inbound"
+  driverSafetyScore: number | null
+  contractRisk: "Low" | "Medium" | "High" | null
+  collectionPercent: number | null
+  daysInState: number
   dateCreated: string
 }
 
@@ -37,77 +42,112 @@ const baseMockVehicles: Vehicle[] = [
     id: "1",
     assetType: "2 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: "LAG-234-XY",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Inactive",
-    vehicleStatus: "3rd Party Check-In",
+    lifecycleState: "3rd Party Check-In",
+    driverSafetyScore: 92,
+    contractRisk: "Low",
+    collectionPercent: 98,
+    daysInState: 45,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "2",
     assetType: "3 Wheeler",
     assetId: "MAX-IN-CH-203",
+    plateNumber: "ABJ-891-KL",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Active",
-    vehicleStatus: "Asset Checkout",
+    lifecycleState: "Asset Checkout",
+    driverSafetyScore: 78,
+    contractRisk: "Low",
+    collectionPercent: 85,
+    daysInState: 120,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "3",
     assetType: "4 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: "KAN-456-MN",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Inactive",
-    vehicleStatus: "3rd Party Check-In",
+    lifecycleState: "3rd Party Check-In",
+    driverSafetyScore: 55,
+    contractRisk: "Medium",
+    collectionPercent: 72,
+    daysInState: 8,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "4",
     assetType: "2 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: "OYO-123-AB",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Active",
-    vehicleStatus: "HP Completed",
+    lifecycleState: "HP Completed",
+    driverSafetyScore: 88,
+    contractRisk: "Low",
+    collectionPercent: 100,
+    daysInState: 30,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "5",
     assetType: "2 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: null,
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: null,
     contractStatus: null,
-    vehicleStatus: "Inbound",
+    lifecycleState: "Inbound",
+    driverSafetyScore: null,
+    contractRisk: null,
+    collectionPercent: null,
+    daysInState: 3,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "6",
     assetType: "2 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: "EKI-789-CD",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Active",
-    vehicleStatus: "HP Completed",
+    lifecycleState: "HP Completed",
+    driverSafetyScore: 35,
+    contractRisk: "High",
+    collectionPercent: 45,
+    daysInState: 200,
     dateCreated: "3 Dec 2023",
   },
   {
     id: "7",
     assetType: "2 Wheeler",
     assetId: "MAX-IB-CH-203",
+    plateNumber: "LAG-567-EF",
     batchNumber: "MAX-3774B55",
     location: "Ikeja",
     championStatus: "Active",
     contractStatus: "Active",
-    vehicleStatus: "HP Completed",
+    lifecycleState: "HP Completed",
+    driverSafetyScore: 65,
+    contractRisk: "Medium",
+    collectionPercent: 60,
+    daysInState: 15,
     dateCreated: "3 Dec 2023",
   },
 ]
@@ -216,6 +256,62 @@ function VehicleIcon({ assetType }: { assetType: string }) {
   )
 }
 
+function getSafetyScoreColor(score: number): string {
+  if (score >= 70) return "#16B04F"
+  if (score >= 50) return "#E88E15"
+  return "#DC2626"
+}
+
+function SafetyScoreRing({ score }: { score: number }) {
+  const color = getSafetyScoreColor(score)
+  const circumference = 2 * Math.PI * 14
+  const strokeDashoffset = circumference - (score / 100) * circumference
+
+  return (
+    <div className="flex items-center gap-2">
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle
+          cx="18"
+          cy="18"
+          r="14"
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth="4"
+        />
+        <circle
+          cx="18"
+          cy="18"
+          r="14"
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          transform="rotate(-90 18 18)"
+        />
+      </svg>
+      <span className="font-medium text-table-text" style={{ fontSize: '14px' }}>{score}</span>
+    </div>
+  )
+}
+
+function CollectionBar({ percent }: { percent: number }) {
+  const color = percent >= 70 ? "#16B04F" : percent >= 50 ? "#E88E15" : "#DC2626"
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 w-20 rounded-full bg-gray-200 overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${percent}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="font-medium text-table-text" style={{ fontSize: '14px' }}>{percent}%</span>
+    </div>
+  )
+}
+
 const columns: ColumnDef<Vehicle>[] = [
   {
     accessorKey: "asset",
@@ -231,11 +327,17 @@ const columns: ColumnDef<Vehicle>[] = [
     ),
   },
   {
-    accessorKey: "batchNumber",
-    header: "Batch Number",
-    cell: ({ row }) => (
-      <span className="font-medium text-table-text" style={{ fontSize: '14px' }}>{row.original.batchNumber}</span>
-    ),
+    accessorKey: "plateNumber",
+    header: "Plate Number",
+    cell: ({ row }) => {
+      const plateNumber = row.original.plateNumber
+      if (!plateNumber || row.original.lifecycleState === "Inbound") {
+        return <span className="text-muted-foreground">-</span>
+      }
+      return (
+        <span className="font-medium text-table-text" style={{ fontSize: '14px' }}>{plateNumber}</span>
+      )
+    },
   },
   {
     accessorKey: "location",
@@ -245,36 +347,45 @@ const columns: ColumnDef<Vehicle>[] = [
     ),
   },
   {
-    accessorKey: "championStatus",
-    header: "Champion Status",
+    accessorKey: "driverSafetyScore",
+    header: "Driver Safety Score",
     cell: ({ row }) => {
-      const status = row.original.championStatus
-      if (!status) return <span className="text-muted-foreground">-</span>
-      return (
-        <StatusBadge variant={status === "Active" ? "success" : "warning"} withDot>
-          {status}
-        </StatusBadge>
-      )
+      const score = row.original.driverSafetyScore
+      if (score === null) return <span className="text-muted-foreground">-</span>
+      return <SafetyScoreRing score={score} />
     },
   },
   {
-    accessorKey: "contractStatus",
-    header: "Contract Status",
+    accessorKey: "contractRisk",
+    header: "Contract Risk",
     cell: ({ row }) => {
-      const status = row.original.contractStatus
-      if (!status) return <span className="text-muted-foreground">-</span>
-      return (
-        <StatusBadge variant={status === "Active" ? "success" : "warning"} withDot>
-          {status}
-        </StatusBadge>
-      )
+      const risk = row.original.contractRisk
+      if (!risk) return <span className="text-muted-foreground">-</span>
+      const variant = risk === "Low" ? "success" : risk === "Medium" ? "warning" : "danger"
+      return <StatusBadge variant={variant}>{risk}</StatusBadge>
     },
   },
   {
-    accessorKey: "vehicleStatus",
-    header: "Vehicle Status",
+    accessorKey: "collectionPercent",
+    header: "Collection %",
     cell: ({ row }) => {
-      const status = row.original.vehicleStatus
+      const percent = row.original.collectionPercent
+      if (percent === null) return <span className="text-muted-foreground">-</span>
+      return <CollectionBar percent={percent} />
+    },
+  },
+  {
+    accessorKey: "daysInState",
+    header: "Days in State",
+    cell: ({ row }) => (
+      <span className="font-medium text-table-text" style={{ fontSize: '14px' }}>{row.original.daysInState}d</span>
+    ),
+  },
+  {
+    accessorKey: "lifecycleState",
+    header: "Lifecycle State",
+    cell: ({ row }) => {
+      const status = row.original.lifecycleState
       const variant =
         status === "HP Completed"
           ? "success"
